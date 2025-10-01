@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  webdav:
+    build:
+      context: ./2.4  # 指定包含Dockerfile的目录
+    container_name: webdav_app
+    restart: unless-stopped
+    volumes:
+      - ./webdav-data:/var/lib/dav/data   # 挂载WebDAV数据目录
+      - ./user.passwd:/user.passwd        # 挂载用户密码文件
+    environment:
+      - AUTH_TYPE=Basic                   # 在HTTPS后使用Basic认证是安全的
+      # - USERNAME=...                    # 由于使用了密码文件，这两项会被忽略
+      # - PASSWORD=...
+    networks:
+      - webdav_network
+
+  nginx:
+    image: nginx:latest
+    container_name: webdav_proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/ssl/private:ro
+    depends_on:
+      - webdav
+    networks:
+      - webdav_network
+
+networks:
+  webdav_network:
+    driver: bridge
